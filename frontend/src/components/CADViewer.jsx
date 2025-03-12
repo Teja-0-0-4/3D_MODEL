@@ -1,17 +1,18 @@
 // src/components/CADViewer.jsx
-import React, { Suspense, useRef, useState, useEffect, useFrame } from 'react'; // Added useFrame
-import { Canvas, useLoader } from '@react-three/fiber';
+import React, { Suspense, useRef, useState, forwardRef } from 'react';
+import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
+import { saveAs } from 'file-saver'; // This should now resolve correctly
 
 // Convert degrees to radians for Three.js
 const degToRad = (degrees) => degrees * (Math.PI / 180);
 
-function Model({ url, scale, position, rotation }) {
+// Model component with forwardRef to handle refs
+const Model = forwardRef(({ url, scale, position, rotation }, ref) => {
   const fileExtension = url.split('.').pop().toLowerCase();
-  const meshRef = useRef();
 
   let object;
   if (fileExtension === 'stl') {
@@ -20,7 +21,7 @@ function Model({ url, scale, position, rotation }) {
     geometry.center();
     geometry.rotateX(Math.PI / 2); // Rotate to horizontal
     return (
-      <mesh ref={meshRef} scale={scale} position={position} rotation={rotation.map(degToRad)} castShadow receiveShadow>
+      <mesh ref={ref} scale={scale} position={position} rotation={rotation.map(degToRad)} castShadow receiveShadow>
         <primitive object={geometry} attach="geometry" />
         <meshStandardMaterial
           color="#7d7d7d" // Blender-like gray
@@ -69,24 +70,19 @@ function Model({ url, scale, position, rotation }) {
 
   return object ? (
     <primitive
-      ref={meshRef}
+      ref={ref}
       object={object}
       scale={scale}
       position={position}
-      rotation={rotation.map(degToRad)} // Convert degrees to radians
+      rotation={rotation.map(degToRad)}
       castShadow
       receiveShadow
     />
   ) : null;
-}
+});
 
-function CADViewer({ modelUrl, onSave }) {
-  const [scale, setScale] = useState([1, 1, 1]);
-  const [position, setPosition] = useState([0, 0, 0]);
-  const [rotation, setRotation] = useState([0, 0, 0]);
-  const meshRef = useRef();
-
-  // Sync transformations with the model in real-time
+// Component to handle real-time updates inside Canvas
+function ModelUpdater({ scale, position, rotation, meshRef }) {
   useFrame(() => {
     if (meshRef.current) {
       meshRef.current.scale.set(scale[0], scale[1], scale[2]);
@@ -94,9 +90,21 @@ function CADViewer({ modelUrl, onSave }) {
       meshRef.current.rotation.set(degToRad(rotation[0]), degToRad(rotation[1]), degToRad(rotation[2]));
     }
   });
+  return null; // No render output needed
+}
+
+function CADViewer({ modelUrl }) {
+  const [scale, setScale] = useState([1, 1, 1]);
+  const [position, setPosition] = useState([0, 0, 0]);
+  const [rotation, setRotation] = useState([0, 0, 0]);
+  const meshRef = useRef();
 
   const handleSave = () => {
-    onSave({ scale, position, rotation });
+    const transformations = { scale, position, rotation };
+    console.log('Downloading model transformations:', transformations);
+    const blob = new Blob([JSON.stringify(transformations, null, 2)], { type: 'application/json;charset=utf-8' });
+    saveAs(blob, 'model_transformations.json');
+    alert('Model transformations downloaded as model_transformations.json!');
   };
 
   const handleInputChange = (setter, index, value) => {
@@ -226,11 +234,17 @@ function CADViewer({ modelUrl, onSave }) {
             <Environment preset="studio" />
             <Suspense fallback={null}>
               <Model
-                ref={meshRef} // Added ref to Model for dynamic updates
+                ref={meshRef}
                 url={modelUrl}
                 scale={scale}
                 position={position}
-                rotation={rotation.map(degToRad)}
+                rotation={rotation}
+              />
+              <ModelUpdater
+                scale={scale}
+                position={position}
+                rotation={rotation}
+                meshRef={meshRef}
               />
             </Suspense>
             <OrbitControls

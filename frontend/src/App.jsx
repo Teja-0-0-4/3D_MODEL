@@ -20,10 +20,16 @@ function App() {
   const handleLogout = () => {
     setToken('');
     localStorage.removeItem('token');
+    setModelUrl(null); // Clear modelUrl on logout
   };
 
   const handleModelUploaded = (url) => {
     setModelUrl(url);
+  };
+
+  // Optional: Add a function to clear the current model
+  const handleModelClear = () => {
+    setModelUrl(null);
   };
 
   return (
@@ -46,7 +52,23 @@ function App() {
                 <div className="viewer-container">
                   <FileUpload token={token} onModelUploaded={handleModelUploaded} />
                   {modelUrl ? (
-                    <CADViewer modelUrl={modelUrl} />
+                    <>
+                      <CADViewer modelUrl={modelUrl} />
+                      <button
+                        onClick={handleModelClear}
+                        style={{
+                          margin: '10px',
+                          padding: '5px 10px',
+                          backgroundColor: '#f44336',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '5px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Clear Model
+                      </button>
+                    </>
                   ) : (
                     <p>Please upload a 3D model to view</p>
                   )}

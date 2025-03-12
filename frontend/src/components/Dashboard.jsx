@@ -1,7 +1,8 @@
 // src/components/Dashboard.jsx
 import React, { useState } from 'react';
-import CADViewer from './CADViewer';
 import { useNavigate } from 'react-router-dom';
+import ErrorBoundary from './ErrorBoundary';
+import CADViewer from './CADViewer';
 
 function Dashboard({ token, onLogout }) {
   const [modelUrl, setModelUrl] = useState(null);
@@ -16,7 +17,10 @@ function Dashboard({ token, onLogout }) {
   };
 
   const handleSave = (transformations) => {
-    console.log('Saved transformations:', transformations);
+    console.log('Received transformations in Dashboard:', transformations);
+    // Example: Save to localStorage (replace with backend API call if needed)
+    localStorage.setItem('modelTransformations', JSON.stringify(transformations));
+    alert('Transformations saved to localStorage!');
   };
 
   const handleLogout = () => {
@@ -26,25 +30,22 @@ function Dashboard({ token, onLogout }) {
 
   return (
     <div style={{ padding: '20px', minHeight: '100vh', backgroundColor: '#f0f0f0' }}>
-      {/* Navbar */}
       <nav style={{ backgroundColor: '#333', padding: '10px', color: 'white', display: 'flex', justifyContent: 'space-between' }}>
         <h3>3D Model Viewer Dashboard</h3>
         <button onClick={handleLogout} style={{ padding: '5px 10px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
           Log Out
         </button>
       </nav>
-
-      {/* Main Content */}
       <div style={{ marginTop: '20px' }}>
         <input type="file" onChange={handleFileUpload} accept=".stl,.obj,.gltf" />
         {modelUrl ? (
-          <CADViewer modelUrl={modelUrl} onSave={handleSave} />
+          <ErrorBoundary>
+            <CADViewer modelUrl={modelUrl} onSave={handleSave} />
+          </ErrorBoundary>
         ) : (
           <p>Please upload a 3D model to view.</p>
         )}
       </div>
-
-      {/* Footer */}
       <footer style={{ backgroundColor: '#333', color: 'white', textAlign: 'center', padding: '10px', position: 'fixed', bottom: '0', width: '100%' }}>
         <p>© 2025 3D Model Viewer. All rights reserved.</p>
       </footer>
